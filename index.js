@@ -1,6 +1,5 @@
 const express = require('express');
-const chromium = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core');
+const { chromium } = require('playwright-core');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -11,13 +10,9 @@ app.post('/generate-pdf', async (req, res) => {
 
     let browser;
     try {
-        browser = await puppeteer.launch({
-            args: chromium.args,
-            executablePath: await chromium.executablePath,
-            headless: chromium.headless
-        });
+        browser = await chromium.launch();
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        await page.setContent(html, { waitUntil: 'networkidle' });
         const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
         const base64 = pdfBuffer.toString('base64');
         res.json({ base64 });
