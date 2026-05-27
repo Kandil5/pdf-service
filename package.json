@@ -1,0 +1,8 @@
+{
+  "name": "puppeteer-bot",
+  "version": "1.0.0",
+  "main": "server.js",
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}
