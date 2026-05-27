@@ -1,5 +1,6 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
+const QRCode = require('qrcode');
 const app = express();
 
 // Increase JSON payload limit because Salesforce HTML templates can be large
@@ -26,10 +27,14 @@ app.post('/generate-pdf', async (req, res) => {
             headless: true
         });
 
+        // Generate QR code and inject into placeholder
+        const qrDataUri = await QRCode.toDataURL('SF:TEST-001|ERP:PV186629|CRM:C017473', { width: 80, margin: 1 });
+        const htmlWithQr = html.replace('<div id="qr-placeholder" style="width:80px;height:80px;"></div>', `<img src="${qrDataUri}" style="width:80px;height:80px;"/>`);
+
         const page = await browser.newPage();
 
         // 2. Set the HTML content received from Salesforce
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        await page.setContent(htmlWithQr, { waitUntil: 'networkidle0' });
         await page.addStyleTag({
             content: `
                 body { 
