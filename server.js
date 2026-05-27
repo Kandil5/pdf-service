@@ -27,19 +27,14 @@ app.post('/generate-pdf', async (req, res) => {
 
         let finalHtml = html;
 
-        // ONLY generate and inject QR code if qrData actually exists
         if (qrData) {
             const qrDataUri = await QRCode.toDataURL(qrData, { width: 80, margin: 0 });
             
-            const qrHtmlStructure = `
-                <div style="position: absolute; bottom: 40px; right: 40px; z-index: 9999;">
-                    <img src="${qrDataUri}" style="width:80px; height:80px; display: block;"/>
-                </div>
-            `;
-
-            finalHtml = html.includes('</body>') 
-                ? html.replace('</body>', `${qrHtmlStructure}</body>`) 
-                : html + qrHtmlStructure;
+            // This replaces your exact placeholder element with the image naturally, keeping your structural layout intact
+            finalHtml = html.replace(
+                /(<div[^>]*id="qr-placeholder"[^>]*>)(<\/div>)/, 
+                `$1<img src="${qrDataUri}" style="width:80px;height:80px;display:block;"/>$2`
+            );
         }
 
         const page = await browser.newPage();
@@ -49,13 +44,10 @@ app.post('/generate-pdf', async (req, res) => {
             content: `
                 body { 
                     width: 820px !important;
-                    max-height: 1190px !important;
-                    zoom: 0.95; 
                     margin: 0 auto !important; 
                     padding-left: 40px !important; 
                     padding-right: 40px !important; 
                     box-sizing: border-box !important;
-                    position: relative !important;
                 }
             `
         });
