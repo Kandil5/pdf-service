@@ -15,9 +15,9 @@ app.post('/generate-pdf', async (req, res) => {
 
     let browser;
     try {
-        // 1. Launch Puppeteer with the correct Docker settings
+        // 1. Launch Puppeteer with the correct Docker paths
         browser = await puppeteer.launch({
-            executablePath: puppeteer.executablePath(),
+            executablePath: '/usr/bin/google-chrome', // MUST be this path for your Dockerfile
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -27,14 +27,29 @@ app.post('/generate-pdf', async (req, res) => {
             headless: true
         });
 
-        // Generate QR code and inject into placeholder
-        const qrDataUri = await QRCode.toDataURL('SF:TEST-001|ERP:PV186629|CRM:C017473', { width: 80, margin: 1 });
-        const htmlWithQr = html.replace(/(<div[^>]*id="qr-placeholder"[^>]*>)(<\/div>)/, `$1<img src="${qrDataUri}" style="width:80px;height:80px;"/>$2`);
+        // 2. Generate QR code image data
+        const qrDataUri = await QRCode.toDataURL('SF:TEST-001|ERP:PV186629|CRM:C017473', { width: 120, margin: 1 });
+        
+        // This HTML wrapper forces the QR code to sit cleanly at the bottom right corner of the page
+        const qrHtmlStructure = `
+            <div style="width: 100%; display: flex; justify-content: flex-end; margin-top: 30px; box-sizing: border-box;">
+                <div style="text-align: center;">
+                    <img src="${qrDataUri}" style="width:120px; height:120px; display: block;"/>
+                    <span style="font-family: sans-serif; font-size: 10px; color: #666;">Scan Document</span>
+                </div>
+            </div>
+        `;
+
+        // Inject the QR code wrapper right before the closing body tag
+        const htmlWithQr = html.includes('</body>') 
+            ? html.replace('</body>', `${qrHtmlStructure}</body>`) 
+            : html + qrHtmlStructure;
 
         const page = await browser.newPage();
 
-        // 2. Set the HTML content received from Salesforce
+        // 3. Set the HTML content received from Salesforce
         await page.setContent(htmlWithQr, { waitUntil: 'networkidle0' });
+        
         await page.addStyleTag({
             content: `
                 body { 
@@ -46,24 +61,25 @@ app.post('/generate-pdf', async (req, res) => {
                 }
             `
         });
-        // 3. Generate the PDF as a binary buffer
+
+        // 4. Generate the PDF as a binary buffer
         await page.setViewport({ width: 900, height: 1200 });
         const pdfBuffer = await page.pdf({
             width: '900px',
-            height: '1273px', // This maintains a standard A4 aspect ratio for 900px width
+            height: '1273px', 
             printBackground: true,
             margin: {
-                top: '40px',    // Adds space at the top of every page
-                bottom: '40px', // Adds space at the bottom of every page
-                left: '40px',   // Adds space on the left side
-                right: '40px'   // Adds space on the right side
+                top: '40px',    
+                bottom: '40px', 
+                left: '40px',   
+                right: '40px'   
             }
         });
 
-        // 4. Convert the binary PDF to a Base64 string for Salesforce
+        // 5. Convert the binary PDF to a Base64 string for Salesforce
         const base64Pdf = pdfBuffer.toString('base64');
 
-        // 5. Send it back in the exact JSON format your LWC expects
+        // 6. Send it back in the exact JSON format your LWC expects
         res.json({ base64: base64Pdf });
 
     } catch (error) {
