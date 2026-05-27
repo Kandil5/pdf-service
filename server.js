@@ -35,8 +35,14 @@ app.post('/generate-pdf', async (req, res) => {
         await page.setViewport({ width: 900, height: 1200 });
         const pdfBuffer = await page.pdf({
             width: '900px',
+            height: '1273px', // This maintains a standard A4 aspect ratio for 900px width
             printBackground: true,
-            margin: { top: '0', right: '0', bottom: '0', left: '0' }
+            margin: {
+                top: '40px',    // Adds space at the top of every page
+                bottom: '40px', // Adds space at the bottom of every page
+                left: '40px',   // Adds space on the left side
+                right: '40px'   // Adds space on the right side
+            }
         });
 
         // 4. Convert the binary PDF to a Base64 string for Salesforce
