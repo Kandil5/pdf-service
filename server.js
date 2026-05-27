@@ -16,7 +16,7 @@ app.post('/generate-pdf', async (req, res) => {
     try {
         // 1. Launch Puppeteer with the correct Docker settings
         browser = await puppeteer.launch({
-            executablePath: '/usr/bin/google-chrome',
+            executablePath: puppeteer.executablePath(),
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -32,9 +32,11 @@ app.post('/generate-pdf', async (req, res) => {
         await page.setContent(html, { waitUntil: 'networkidle0' });
 
         // 3. Generate the PDF as a binary buffer
+        await page.setViewport({ width: 900, height: 1200 });
         const pdfBuffer = await page.pdf({
-            format: 'A4',
-            printBackground: true // Keeps colors/styles intact
+            width: '900px',
+            printBackground: true,
+            margin: { top: '0', right: '0', bottom: '0', left: '0' }
         });
 
         // 4. Convert the binary PDF to a Base64 string for Salesforce
