@@ -30,7 +30,17 @@ app.post('/generate-pdf', async (req, res) => {
 
         // 2. Set the HTML content received from Salesforce
         await page.setContent(html, { waitUntil: 'networkidle0' });
-
+        await page.addStyleTag({
+            content: `
+                body { 
+                    width: 820px !important; /* 900px total width minus 80px for left/right margins */
+                    margin: 0 auto !important; 
+                    padding-left: 40px !important; 
+                    padding-right: 40px !important; 
+                    box-sizing: border-box !important;
+                }
+            `
+        });
         // 3. Generate the PDF as a binary buffer
         await page.setViewport({ width: 900, height: 1200 });
         const pdfBuffer = await page.pdf({
