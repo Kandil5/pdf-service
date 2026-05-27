@@ -29,7 +29,7 @@ app.post('/generate-pdf', async (req, res) => {
 
         // Generate QR code and inject into placeholder
         const qrDataUri = await QRCode.toDataURL('SF:TEST-001|ERP:PV186629|CRM:C017473', { width: 80, margin: 1 });
-        const htmlWithQr = html.replace('<div id="qr-placeholder" style="width:80px;height:80px;"></div>', `<img src="${qrDataUri}" style="width:80px;height:80px;"/>`);
+        const htmlWithQr = html.replace(/id="qr-placeholder"[^>]*><\/div>/, `id="qr-placeholder"><img src="${qrDataUri}" style="width:80px;height:80px;"/></div>`);
 
         const page = await browser.newPage();
 
