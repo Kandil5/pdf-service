@@ -25,20 +25,8 @@ app.post('/generate-pdf', async (req, res) => {
             headless: true
         });
 
-        let finalHtml = html;
-
-        if (qrData) {
-            const qrDataUri = await QRCode.toDataURL(qrData, { width: 80, margin: 0 });
-            
-            // This replaces your exact placeholder element with the image naturally, keeping your structural layout intact
-            finalHtml = html.replace(
-                /(<div[^>]*id="qr-placeholder"[^>]*>)(<\/div>)/, 
-                `$1<img src="${qrDataUri}" style="width:80px;height:80px;display:block;"/>$2`
-            );
-        }
-
         const page = await browser.newPage();
-        await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
+        await page.setContent(html, { waitUntil: 'networkidle0' });
         
         await page.addStyleTag({
             content: `
@@ -52,12 +40,36 @@ app.post('/generate-pdf', async (req, res) => {
             `
         });
 
+        // 1. Generate the QR code string if data is provided
+let footerTemplate = '<div></div>'; 
+        if (qrData) {
+            const qrDataUri = await QRCode.toDataURL(qrData, { width: 75, margin: 0 });
+            
+            // The <style> tag below tells Chromium to stop collapsing the footer container
+            footerTemplate = `
+                <style>
+                    #footer { padding: 0 !important; }
+                </style>
+                <div style="width: 100%; padding-right: 40px; text-align: right; box-sizing: border-box;">
+                    <img src="${qrDataUri}" style="width: 75px; height: 75px; display: inline-block;" />
+                </div>
+            `;
+        }
         await page.setViewport({ width: 900, height: 1200 });
+        
         const pdfBuffer = await page.pdf({
             width: '900px',
             height: '1273px', 
             printBackground: true,
-            margin: { top: '40px', bottom: '40px', left: '40px', right: '40px' }
+            displayHeaderFooter: true, // Turns on the independent margin layer
+            headerTemplate: '<div></div>', // Empty header
+            footerTemplate: footerTemplate, // Inserts the isolated QR code
+            margin: { 
+                top: '40px', 
+                bottom: '120px', // Creates safe empty margin space at the bottom so content never collides
+                left: '40px', 
+                right: '40px' 
+            }
         });
 
         const base64Pdf = pdfBuffer.toString('base64');
